@@ -109,6 +109,14 @@
                 android:name="com.google.firebase.ml.vision.DEPENDENCIES"
                 android:value="label" />
         </activity>
+        <activity
+            android:name=".md.java.LiveObjectCloudDetectionPayActivity"
+            android:exported="false"
+            android:screenOrientation="portrait">
+            <meta-data
+                android:name="com.google.firebase.ml.vision.DEPENDENCIES"
+                android:value="label" />
+        </activity>
         <!--  -->
         <activity
             android:name=".md.java.LiveObjectCloudDetectionActivity"
@@ -132,7 +140,7 @@
             android:screenOrientation="portrait">
             <meta-data
                 android:name="com.google.firebase.ml.vision.DEPENDENCIES"
-                android:value="label" />
+                android:value="ocr" />
         </activity>
         <activity
             android:name=".md.java.LiveObjectCloudLandDetectionActivity"

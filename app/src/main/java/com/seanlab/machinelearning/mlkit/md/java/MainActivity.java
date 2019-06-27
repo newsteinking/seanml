@@ -50,7 +50,8 @@ public class MainActivity extends AppCompatActivity {
 
   private enum DetectionMode {
     ODT_LIVE_BARCODE(R.drawable.barcode_scanning2,R.string.mode_odt_live_barcode_title, R.string.mode_odt_live_barcode_subtitle),
-    ODT_LIVE_IMAGE_LABEL(R.drawable.image_labelling2,R.string.mode_odt_live_image_label_title, R.string.mode_odt_live_image_label_subtitle);
+    ODT_LIVE_IMAGE_LABEL(R.drawable.image_labelling2,R.string.mode_odt_live_image_label_title, R.string.mode_odt_live_image_label_subtitle),
+    ODT_LIVE_TEXT(R.drawable.text_recognition,R.string.mode_odt_live_text_title, R.string.mode_odt_live_text_subtitle);
 
    // ODT_LIVE_IMAGE(R.drawable.image_labelling,R.string.mode_odt_live_image_title, R.string.mode_odt_live_image_subtitle),
    // ODT_LIVE_TEXT(R.drawable.text_recognition,R.string.mode_odt_live_text_title, R.string.mode_odt_live_text_subtitle),
@@ -124,7 +125,7 @@ public class MainActivity extends AppCompatActivity {
     public ModeItemViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
       return new ModeItemViewHolder(
           LayoutInflater.from(parent.getContext())
-              .inflate(R.layout.detection_mode_item, parent, false));
+              .inflate(R.layout.detection_mode_item_ml, parent, false));
     }
 
     @Override
@@ -164,7 +165,11 @@ public class MainActivity extends AppCompatActivity {
                   break;
                 case ODT_LIVE_IMAGE_LABEL:
                   //activity.startActivity(new Intent(activity, LiveObjectCloudDetectionActivity.class));
-                  activity.startActivity(new Intent(activity, BillingActivity.class));
+                  activity.startActivity(new Intent(activity, LiveObjectCloudDetectionPayActivity.class));
+                  break;
+                case ODT_LIVE_TEXT:
+                  //Utils.openImagePicker(activity);
+                  activity.startActivity(new Intent(activity, com.seanlab.machinelearning.mlkit.md.java.LiveObjectCloudTextDetectionActivity.class));
                   break;
                   /*
                 case ODT_LIVE_HOME:

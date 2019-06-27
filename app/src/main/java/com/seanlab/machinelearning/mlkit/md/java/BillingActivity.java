@@ -25,12 +25,13 @@ public class BillingActivity extends Activity {
     private static final String LOG_TAG = "iabv3";
 
     // PRODUCT & SUBSCRIPTION IDS
-    private static final String PRODUCT_ID = "com.anjlab.test.iab.s2.p5";
-    private static final String SUBSCRIPTION_ID = "com.anjlab.test.iab.subs1";
-    private static final String LICENSE_KEY = null; // PUT YOUR MERCHANT KEY HERE;
+    private static final String PRODUCT_ID = "seanlabml1_1";
+    private static final String SUBSCRIPTION_ID = "seanlabml1_1_subscribe";
+    private static final String LICENSE_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAgFAv9iG2K2T+JbGGGQnUpiwzu9Y93Vc0G71CBdkjKzypMawNPjJRRoLTg2SJR+QciEfpQy7ffkKYsYOkMViI/NOGeqgIes6tav8+WUMHklOWgfRy76DJwNkgC/MJrpP1Sb5dCQX5Imd3ojm7nwZ0jJIAnDcnND/neSCGOqrfGkiSaQ20B5JdMfF74unF9bWIrmY8gUW18xE+2mL+Hi5DyY14sBMGt2Dq1DvK5nOhDdH+eP5ECR1i5cURJ0pUfmGSDtWEqDnEwP15ZZ/XvuBVBG1hlBzRe79wIxY8mXmE/RQf1PiNIqtW29Kg/h7ksG4ekhwWUZkn78SMWkyKfm+3KwIDAQAB";
+    ; // PUT YOUR MERCHANT KEY HERE;
     // put your Google merchant id here (as stated in public profile of your Payments Merchant Center)
     // if filled library will provide protection against Freedom alike Play Market simulators
-    private static final String MERCHANT_ID=null;
+    private static final String MERCHANT_ID="14802266721074175569";
 
     private BillingProcessor bp;
     private boolean readyToPurchase = false;

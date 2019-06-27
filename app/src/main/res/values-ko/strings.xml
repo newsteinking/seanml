@@ -7,14 +7,10 @@
     <string name="entry_kotlin_subtitle">Run the MLKit Showcase written in Kotlin.</string>
     <string name="mode_odt_live_home_title">재활용의 모든것</string>
     <string name="mode_odt_live_home_subtitle">자세한 재활용 활용법을 알아보아요.</string>
-    <string name="mode_odt_live_image_label_title">이미지 라벨 찾기</string>
-    <string name="mode_odt_live_image_label_subtitle">머신러닝으로 재활용  검색을 해보세요.</string>
     <string name="mode_odt_live_image_title">비슷한 이미지 검색</string>
     <string name="mode_odt_live_image_subtitle">머신러닝으로 비슷한 사진을 검색을 해보세요.</string>
     <string name="mode_odt_live_text_title">글자 인식하기</string>
     <string name="mode_odt_live_text_subtitle">간단히 카드 유효기간을 확인해보세요.</string>
-    <string name="mode_odt_live_barcode_title">바코드 QR 코드 찾기</string>
-    <string name="mode_odt_live_barcode_subtitle">바코드 또는 QR로 재활용 방법을  알아보세요..</string>
     <string name="mode_odt_live_landmark_title">유명장소 찾기</string>
     <string name="mode_odt_live_landmark_subtitle">유명지 사진이 맞는지 확인해보세요.</string>
     <string name="mode_odt_live_face_title">얼굴 인식</string>
@@ -211,5 +207,13 @@
 
     <string name="wait">기다리세요.</string>
     <string name="title">Sample Activity #%d</string>
+
+    <string name="app_name">머신러닝</string>
+    <string name="mode_odt_live_barcode_title">바코드 QR 코드 찾기</string>
+    <string name="mode_odt_live_barcode_subtitle">바코드 또는 QR로   검색해 보세요.</string>
+    <string name="mode_odt_live_image_label_title">이미지 라벨 찾기</string>
+    <string name="mode_odt_live_image_label_subtitle">머신러닝으로 이미지 검색을 해보세요.</string>
+    <string name="title_text">글자 인식하기</string>
+    <string name="desc_text">머신러닝으로 글자를  읽어 보세요.</string>
 
 </resources>
