@@ -29,13 +29,17 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.anjlab.android.iab.v3.BillingProcessor;
+import com.anjlab.android.iab.v3.TransactionDetails;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
@@ -43,6 +47,11 @@ import com.google.android.material.chip.Chip;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.ml.vision.FirebaseVision;
 import com.google.firebase.ml.vision.common.FirebaseVisionImage;
 import com.google.firebase.ml.vision.label.FirebaseVisionCloudImageLabelerOptions;
@@ -63,8 +72,11 @@ import com.seanlab.machinelearning.mlkit.md.java.productsearch.BottomSheetScrimV
 import com.seanlab.machinelearning.mlkit.md.java.productsearch.Product;
 import com.seanlab.machinelearning.mlkit.md.java.productsearch.ProductAdapter;
 //import com.seanlab.machinelearning.mlkit.md.java.productsearch.SearchEngineCloudImage;
+import com.seanlab.machinelearning.mlkit.md.java.productsearch.SearchEngine;
+import com.seanlab.machinelearning.mlkit.md.java.productsearch.SearchEngineCloud;
 import com.seanlab.machinelearning.mlkit.md.java.productsearch.SearchEngineCloudText;
 import com.seanlab.machinelearning.mlkit.md.java.productsearch.SearchedObject;
+import com.seanlab.machinelearning.mlkit.md.java.settings.AppStorage;
 import com.seanlab.machinelearning.mlkit.md.java.settings.PreferenceUtils;
 import com.seanlab.machinelearning.mlkit.md.java.settings.SettingsActivity;
 import com.seanlab.machinelearning.mlkit.md.common.GraphicOverlayLabel;
@@ -122,6 +134,8 @@ public class LiveObjectCloudTextDetectionActivity extends AppCompatActivity impl
   private Bitmap searchbitmap;
   private VisionImageProcessor imageProcessor;
 
+  private SearchEngine searchNullEngineCloud;
+
 
 
 
@@ -133,12 +147,35 @@ public class LiveObjectCloudTextDetectionActivity extends AppCompatActivity impl
   private Bitmap objectThumbnailForBottomSheet;
   private boolean slidingSheetUpFromHiddenState;
 
+  // Payment
+
+  // PRODUCT & SUBSCRIPTION IDS
+  private static final String PRODUCT_ID = "seanlabml1_1";
+  private static final String SUBSCRIPTION_ID = "seanlabml1_1_subscribe";
+  private static final String LICENSE_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAgFAv9iG2K2T+JbGGGQnUpiwzu9Y93Vc0G71CBdkjKzypMawNPjJRRoLTg2SJR+QciEfpQy7ffkKYsYOkMViI/NOGeqgIes6tav8+WUMHklOWgfRy76DJwNkgC/MJrpP1Sb5dCQX5Imd3ojm7nwZ0jJIAnDcnND/neSCGOqrfGkiSaQ20B5JdMfF74unF9bWIrmY8gUW18xE+2mL+Hi5DyY14sBMGt2Dq1DvK5nOhDdH+eP5ECR1i5cURJ0pUfmGSDtWEqDnEwP15ZZ/XvuBVBG1hlBzRe79wIxY8mXmE/RQf1PiNIqtW29Kg/h7ksG4ekhwWUZkn78SMWkyKfm+3KwIDAQAB";
+  ; // PUT YOUR MERCHANT KEY HERE;
+  // put your Google merchant id here (as stated in public profile of your Payments Merchant Center)
+  // if filled library will provide protection against Freedom alike Play Market simulators
+  private static final String MERCHANT_ID="14802266721074175569";
+
+  private BillingProcessor bp;
+  private boolean readyToPurchase = false;
+
+    // Real Database
+    DatabaseReference mRootRef = FirebaseDatabase.getInstance().getReference();
+    DatabaseReference conditionRef = mRootRef.child("firebaseactivate");
+
+  private boolean ISPurchase = false;
+  private boolean ISSubscribe = false;
+
+
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
 
     //searchEngine = new SearchEngine(getApplicationContext());
-    searchEngineCloud = new SearchEngineCloudText(getApplicationContext());
+    //searchEngineCloud = new SearchEngineCloudText(getApplicationContext());
 
     setContentView(R.layout.activity_live_object_cloud);
     preview = findViewById(R.id.camera_preview);
@@ -174,8 +211,100 @@ public class LiveObjectCloudTextDetectionActivity extends AppCompatActivity impl
     settingsButton = findViewById(R.id.settings_button);
     settingsButton.setOnClickListener(this);
 
+
+    //Payment
+
+    if(!BillingProcessor.isIabServiceAvailable(this)) {
+      showToast("In-app billing service is unavailable, please upgrade Android Market/Play to version >= 3.9.16");
+    }
+    bp = new BillingProcessor(this, LICENSE_KEY, MERCHANT_ID, new BillingProcessor.IBillingHandler() {
+      @Override
+      public void onProductPurchased(@NonNull String productId, @Nullable TransactionDetails details) {
+        //showToast("onProductPurchased: " + productId);
+        Log.d(TAG, "onProductPurchased : " + productId);
+        ISPurchase=true;
+        //updateTextViews();
+      }
+      @Override
+      public void onBillingError(int errorCode, @Nullable Throwable error) {
+        //showToast("onBillingError: " + Integer.toString(errorCode));
+        Log.d(TAG, "onBillingError : " + Integer.toString(errorCode));
+      }
+      @Override
+      public void onBillingInitialized() {
+        //showToast("onBillingInitialized");
+        Log.d(TAG, "onBillingInitialized : " );
+        readyToPurchase = true;
+        //updateTextViews();
+      }
+      @Override
+      public void onPurchaseHistoryRestored() {
+        showToast("onPurchaseHistoryRestored");
+        Log.d(TAG, "onPurchaseHistoryRestored : " );
+        for(String sku : bp.listOwnedProducts())
+          Log.d(TAG, "Owned Managed Product: " + sku);
+        for(String sku : bp.listOwnedSubscriptions()) {
+          Log.d(TAG, "Owned Subscription: " + sku);
+          Log.d(TAG, "Owned Subscription: " + sku);
+          if (sku == SUBSCRIPTION_ID) {
+            Log.d(TAG, "Owned Subscription: " + SUBSCRIPTION_ID);
+            ISSubscribe = true;
+          }
+        }
+        //updateTextViews();
+      }
+    });
+
+    AppStorage storage = new AppStorage(this);
+    ISPurchase=storage.purchasedRemoveAds();
+    ISSubscribe=storage.subsribedRemoveAds();
+
+      // checkDB
+    Log.d(TAG, "purchasedRemoveAds : " + ISPurchase);
+    //checkDBValue();
+    Log.d(TAG, "subsribedRemoveAds : " + ISSubscribe);
+
+
+    //searchEngine = new SearchEngine(getApplicationContext());
+    if(ISSubscribe) {
+      searchEngineCloud = new SearchEngineCloudText(getApplicationContext());
+    } else
+    {
+      searchNullEngineCloud = new SearchEngine(getApplicationContext());
+    }
+
     setUpWorkflowModel();
+
+
   }
+
+    public void checkDBValue()
+    {
+        conditionRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                String text = dataSnapshot.getValue(String.class);
+                if (text==null)
+                {
+                    ISSubscribe =false;
+                  Log.d(TAG, "Text Null: " + ISSubscribe);
+                } else if (Integer.parseInt(text)==1200)
+                {
+                    ISSubscribe = true;
+                  Log.d(TAG, "Text 1200: " + ISSubscribe);
+                }
+
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+              Log.d(TAG, "databaseError: " );
+            }
+        });
+
+    }
+
+
 
   @Override
   protected void onResume() {
@@ -190,6 +319,9 @@ public class LiveObjectCloudTextDetectionActivity extends AppCompatActivity impl
             ? new MultiObjectProcessor(graphicOverlay, workflowModel)
             : new ProminentObjectProcessor(graphicOverlay, workflowModel));
     workflowModel.setWorkflowState(WorkflowModel.WorkflowState.DETECTING);
+
+
+
   }
 
   @Override
@@ -197,6 +329,8 @@ public class LiveObjectCloudTextDetectionActivity extends AppCompatActivity impl
     super.onPause();
     currentWorkflowState = WorkflowModel.WorkflowState.NOT_STARTED;
     stopCameraPreview();
+
+
   }
 
   @Override
@@ -207,7 +341,16 @@ public class LiveObjectCloudTextDetectionActivity extends AppCompatActivity impl
       cameraSource = null;
     }
     //searchEngine.shutdown();
-    searchEngineCloud.shutdown();
+    //searchEngineCloud.shutdown();
+    if(ISSubscribe) {
+      searchEngineCloud.shutdown();
+    } else
+    {
+      searchNullEngineCloud.shutdown();
+    }
+
+
+
 
   }
 
@@ -218,6 +361,8 @@ public class LiveObjectCloudTextDetectionActivity extends AppCompatActivity impl
     } else {
       super.onBackPressed();
     }
+
+
   }
 
   @Override
@@ -361,6 +506,84 @@ public class LiveObjectCloudTextDetectionActivity extends AppCompatActivity impl
         });
 
     // Observes changes on the object to search, if happens, fire product search request.
+    ///---------------------------------------------------------------------
+    //Payment
+    if (ISSubscribe)
+    {
+      Log.d(TAG, "SEAN:FirebaseVisionImage===>onSuccess");
+
+      workflowModel.objectToSearch.observe(
+              this, object -> searchEngineCloud.search(object, workflowModel));
+
+
+      // Observes changes on the object that has search completed, if happens, show the bottom sheet
+      // to present search result.
+      workflowModel.searchedObject.observe(
+              this,
+              searchedObject -> {
+                if (searchedObject != null) {
+                  List<Product> productList = searchedObject.getProductList();
+
+                  objectThumbnailForBottomSheet = searchedObject.getObjectThumbnail();
+
+                  //sean
+                  //getFromCloud();
+
+                  bottomSheetTitleView.setText(
+                          getResources()
+                                  .getQuantityString(
+                                          R.plurals.bottom_sheet_title, productList.size(), productList.size()));
+                  productRecyclerView.setAdapter(new ProductAdapter(productList));
+
+                  Log.d(TAG, "searched : " + productList.size());
+
+
+                  slidingSheetUpFromHiddenState = true;
+                  bottomSheetBehavior.setPeekHeight(preview.getHeight() / 2);
+                  bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                }
+              });
+    }  //if subscribe
+    else
+    {
+      Log.d(TAG, "SEAN:FirebaseVisionImage===>Not Subscribe");
+      workflowModel.objectToSearch.observe(
+              this, object -> searchNullEngineCloud.search(object, workflowModel));
+
+
+      // Observes changes on the object that has search completed, if happens, show the bottom sheet
+      // to present search result.
+      workflowModel.searchedObject.observe(
+              this,
+              searchedObject -> {
+                if (searchedObject != null) {
+                  List<Product> productList = searchedObject.getProductList();
+
+                  objectThumbnailForBottomSheet = searchedObject.getObjectThumbnail();
+
+                  //sean
+                  //getFromCloud();
+
+                  bottomSheetTitleView.setText(
+                          getResources()
+                                  .getQuantityString(
+                                          R.plurals.bottom_sheet_title, productList.size(), productList.size()));
+                  productRecyclerView.setAdapter(new ProductAdapter(productList));
+
+                  Log.d(TAG, "searched : " + productList.size());
+
+
+                  slidingSheetUpFromHiddenState = true;
+                  bottomSheetBehavior.setPeekHeight(preview.getHeight() / 2);
+                  bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+
+                  //Payment popup
+                  bp.subscribe(this,SUBSCRIPTION_ID);
+
+                }
+              });
+    }
+    /*
     workflowModel.objectToSearch.observe(
             this, object -> searchEngineCloud.search(object, workflowModel));
 
@@ -390,8 +613,8 @@ public class LiveObjectCloudTextDetectionActivity extends AppCompatActivity impl
                 bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
               }
             });
-
-
+       */
+      ///----------------------------------------------------------
   }
 
 
@@ -495,4 +718,10 @@ public class LiveObjectCloudTextDetectionActivity extends AppCompatActivity impl
       searchButtonAnimator.start();
     }
   }
+
+  //Payment
+  private void showToast(String message) {
+    Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+  }
+
 }

@@ -18,8 +18,10 @@ package com.seanlab.machinelearning.mlkit.md.java;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,6 +36,13 @@ import androidx.appcompat.app.AppCompatDelegate;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.anjlab.android.iab.v3.BillingProcessor;
+import com.anjlab.android.iab.v3.TransactionDetails;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.seanlab.machinelearning.mlkit.R;
 import com.seanlab.machinelearning.mlkit.md.java.WebHomeActivity;
 import com.seanlab.machinelearning.mlkit.md.java.PointActivity;
@@ -41,17 +50,18 @@ import com.seanlab.machinelearning.mlkit.md.java.BillingActivity;
 
 import com.seanlab.machinelearning.mlkit.ghost.view.LoginActivity;
 
-
+import com.seanlab.machinelearning.mlkit.md.java.settings.AppStorage;
 
 /** Entry activity to select the detection mode. */
 public class MainActivity extends AppCompatActivity {
 
-
+  private static final String TAG = "MainActivity";
 
   private enum DetectionMode {
     ODT_LIVE_BARCODE(R.drawable.barcode_scanning2,R.string.mode_odt_live_barcode_title, R.string.mode_odt_live_barcode_subtitle),
     ODT_LIVE_IMAGE_LABEL(R.drawable.image_labelling2,R.string.mode_odt_live_image_label_title, R.string.mode_odt_live_image_label_subtitle),
-    ODT_LIVE_TEXT(R.drawable.text_recognition,R.string.mode_odt_live_text_title, R.string.mode_odt_live_text_subtitle);
+    ODT_LIVE_TEXT(R.drawable.text_recognition,R.string.mode_odt_live_text_title, R.string.mode_odt_live_text_subtitle),
+    ODT_LIVE_MYPOINT(R.drawable.mypoint,R.string.mode_odt_live_mypoint_title, R.string.mode_odt_live_mypoint_subtitle),;
 
    // ODT_LIVE_IMAGE(R.drawable.image_labelling,R.string.mode_odt_live_image_title, R.string.mode_odt_live_image_subtitle),
    // ODT_LIVE_TEXT(R.drawable.text_recognition,R.string.mode_odt_live_text_title, R.string.mode_odt_live_text_subtitle),
@@ -75,6 +85,30 @@ public class MainActivity extends AppCompatActivity {
     }
   }
 
+  // Payment
+  // PRODUCT & SUBSCRIPTION IDS
+  private static final String PRODUCT_ID = "seanlabml1_1";
+  private static final String SUBSCRIPTION_ID = "seanlabml1_1_subscribe";
+  private static final String LICENSE_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAgFAv9iG2K2T+JbGGGQnUpiwzu9Y93Vc0G71CBdkjKzypMawNPjJRRoLTg2SJR+QciEfpQy7ffkKYsYOkMViI/NOGeqgIes6tav8+WUMHklOWgfRy76DJwNkgC/MJrpP1Sb5dCQX5Imd3ojm7nwZ0jJIAnDcnND/neSCGOqrfGkiSaQ20B5JdMfF74unF9bWIrmY8gUW18xE+2mL+Hi5DyY14sBMGt2Dq1DvK5nOhDdH+eP5ECR1i5cURJ0pUfmGSDtWEqDnEwP15ZZ/XvuBVBG1hlBzRe79wIxY8mXmE/RQf1PiNIqtW29Kg/h7ksG4ekhwWUZkn78SMWkyKfm+3KwIDAQAB";
+  ; // PUT YOUR MERCHANT KEY HERE;
+  // put your Google merchant id here (as stated in public profile of your Payments Merchant Center)
+  // if filled library will provide protection against Freedom alike Play Market simulators
+  private static final String MERCHANT_ID="14802266721074175569";
+
+  private BillingProcessor bp;
+  private boolean readyToPurchase = false;
+
+  // Real Database
+  DatabaseReference mRootRef = FirebaseDatabase.getInstance().getReference();
+  DatabaseReference conditionRef = mRootRef.child("firebaseactivate");
+  private boolean ISPurchase = false;
+  private boolean ISSubscribe = false;
+
+
+
+
+
+
   @Override
   protected void onCreate(@Nullable Bundle bundle) {
     super.onCreate(bundle);
@@ -87,8 +121,93 @@ public class MainActivity extends AppCompatActivity {
     modeRecyclerView.setLayoutManager(new LinearLayoutManager(this));
     modeRecyclerView.setAdapter(new ModeItemAdapter(DetectionMode.values()));
 
+    AppStorage storage = new AppStorage(this);
+    ISPurchase=storage.purchasedRemoveAds();
+    ISSubscribe=storage.subsribedRemoveAds();
+    Log.d(TAG, "ISPurchase : " + ISPurchase);
+    Log.d(TAG, "ISSubscribe : " + ISSubscribe);
+
+    //storage.setPurchasedRemoveAds(ISPurchase);
+    //storage.setsusribedRemoveAds(ISSubscribe);
+
+    //Payment
+    if(!BillingProcessor.isIabServiceAvailable(this)) {
+      showToast("In-app billing service is unavailable, please upgrade Android Market/Play to version >= 3.9.16");
+    }
+    bp = new BillingProcessor(this, LICENSE_KEY, MERCHANT_ID, new BillingProcessor.IBillingHandler() {
+      @Override
+      public void onProductPurchased(@NonNull String productId, @Nullable TransactionDetails details) {
+        //showToast("onProductPurchased: " + productId);
+        Log.d(TAG, "onProductPurchased : " + productId);
+        ISPurchase=true;
+        storage.setPurchasedRemoveAds(ISPurchase);
+
+        //updateTextViews();
+      }
+      @Override
+      public void onBillingError(int errorCode, @Nullable Throwable error) {
+        //showToast("onBillingError: " + Integer.toString(errorCode));
+        Log.d(TAG, "onBillingError : " + Integer.toString(errorCode));
+      }
+      @Override
+      public void onBillingInitialized() {
+        //showToast("onBillingInitialized");
+        Log.d(TAG, "onBillingInitialized : " );
+        readyToPurchase = true;
+        //updateTextViews();
+      }
+      @Override
+      public void onPurchaseHistoryRestored() {
+        showToast("onPurchaseHistoryRestored");
+        Log.d(TAG, "onPurchaseHistoryRestored : " );
+        for(String sku : bp.listOwnedProducts())
+          Log.d(TAG, "Owned Managed Product: " + sku);
+        for(String sku : bp.listOwnedSubscriptions()) {
+          Log.d(TAG, "Owned Subscription: " + sku);
+          Log.d(TAG, "Owned Subscription: " + sku);
+          if (sku == SUBSCRIPTION_ID) {
+            Log.d(TAG, "Owned Subscription: " + SUBSCRIPTION_ID);
+            ISSubscribe = true;
+            storage.setsusribedRemoveAds(ISSubscribe);
+          }
+        }
+        //updateTextViews();
+      }
+    });
+
+
+    //checkDBValue();
 
   }
+
+  public void checkDBValue()
+  {
+    conditionRef.addValueEventListener(new ValueEventListener() {
+      @Override
+      public void onDataChange(DataSnapshot dataSnapshot) {
+        String text = dataSnapshot.getValue(String.class);
+        if (text==null)
+        {
+          ISSubscribe =false;
+          Log.d(TAG, "Text Null: " + ISSubscribe);
+        } else if (Integer.parseInt(text)==1200)
+        {
+          ISSubscribe = true;
+          Log.d(TAG, "Text 1200: " + ISSubscribe);
+        }
+
+      }
+
+      @Override
+      public void onCancelled(DatabaseError databaseError) {
+        Log.d(TAG, "databaseError: " );
+      }
+    });
+
+  }
+
+
+
 
   @Override
   protected void onResume() {
@@ -171,6 +290,11 @@ public class MainActivity extends AppCompatActivity {
                   //Utils.openImagePicker(activity);
                   activity.startActivity(new Intent(activity, com.seanlab.machinelearning.mlkit.md.java.LiveObjectCloudTextDetectionActivity.class));
                   break;
+
+                case ODT_LIVE_MYPOINT:
+                  activity.startActivity(new Intent(activity, com.seanlab.machinelearning.mlkit.md.java.PointActivity.class));
+                  break;
+
                   /*
                 case ODT_LIVE_HOME:
                   activity.startActivity(new Intent(activity, WebHomeActivity.class));
@@ -214,4 +338,10 @@ public class MainActivity extends AppCompatActivity {
       }
     }
   }
+
+  //Payment
+  private void showToast(String message) {
+    Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+  }
+
 }

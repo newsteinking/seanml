@@ -6,4 +6,5 @@
     <string name="mode_odt_live_barcode_subtitle">Learn how to search for images with barcodes or QR.</string>
     <string name="mode_odt_live_image_label_title">Image Label Search</string>
     <string name="mode_odt_live_image_label_subtitle">Try image search with machine learning</string>
+
 </resources>

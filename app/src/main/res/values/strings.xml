@@ -2,7 +2,7 @@
     <string name="app_name">머신러닝</string>
     <string name="app_web_name">달인웹</string>
     <string name="detected_items">찾는것</string>
-    <string name="desc_text">간단히 카드 유효기간을 확인해보세요.</string>
+    <string name="desc_text">간단히 글자를 인식시켜 보세요.</string>
     <string name="desc_face">개인적 머신러닝을 해보세요.</string>
     <string name="desc_barcode">바코드 또는 QR 코드로 찾아보세요.</string>
     <string name="desc_labelling">인공지능으로 재활용을 검색해 해보세요.</string>
@@ -112,7 +112,8 @@
     <string name="url">http://34.66.128.95</string>
     <string name="title_point">나의 포인트</string>
     <string name="point_value">100  점 </string>
-
+    <string name="title_pointplus"> +100 포인트</string>
+    <string name="title_pointminus"> -100 포인트</string>
 
     <!--  Ghost -->
     <!-- login -->

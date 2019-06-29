@@ -43,6 +43,11 @@ import com.google.android.material.chip.Chip;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.ml.vision.FirebaseVision;
 import com.google.firebase.ml.vision.common.FirebaseVisionImage;
 import com.google.firebase.ml.vision.label.FirebaseVisionCloudImageLabelerOptions;
@@ -65,6 +70,7 @@ import com.seanlab.machinelearning.mlkit.md.java.productsearch.ProductAdapter;
 import com.seanlab.machinelearning.mlkit.md.java.productsearch.SearchEngineCloud;
 import com.seanlab.machinelearning.mlkit.md.java.productsearch.SearchEngine;
 import com.seanlab.machinelearning.mlkit.md.java.productsearch.SearchedObject;
+import com.seanlab.machinelearning.mlkit.md.java.settings.AppStorage;
 import com.seanlab.machinelearning.mlkit.md.java.settings.PreferenceUtils;
 import com.seanlab.machinelearning.mlkit.md.java.settings.SettingsActivity;
 
@@ -141,8 +147,14 @@ public class LiveObjectCloudDetectionPayActivity extends AppCompatActivity imple
   private BillingProcessor bp;
   private boolean readyToPurchase = false;
 
+   // Real Database
+  DatabaseReference mRootRef = FirebaseDatabase.getInstance().getReference();
+  DatabaseReference conditionRef = mRootRef.child("firebaseactivate");
+
+
+
   private boolean ISPurchase = false;
-  private boolean ISSubscribe = true;
+  private boolean ISSubscribe = false;
 
 
 
@@ -192,9 +204,10 @@ public class LiveObjectCloudDetectionPayActivity extends AppCompatActivity imple
     settingsButton = findViewById(R.id.settings_button);
     settingsButton.setOnClickListener(this);
 
-    setUpWorkflowModel();
+
 
     //Payment
+
     if(!BillingProcessor.isIabServiceAvailable(this)) {
       showToast("In-app billing service is unavailable, please upgrade Android Market/Play to version >= 3.9.16");
     }
@@ -236,6 +249,15 @@ public class LiveObjectCloudDetectionPayActivity extends AppCompatActivity imple
       }
     });
 
+      AppStorage storage = new AppStorage(this);
+      ISPurchase=storage.purchasedRemoveAds();
+      ISSubscribe=storage.subsribedRemoveAds();
+
+
+      // checkDB
+      Log.d(TAG, "purchasedRemoveAds : " + ISPurchase);
+      //checkDBValue();
+      Log.d(TAG, "subsribedRemoveAds : " + ISSubscribe);
 
     //searchEngine = new SearchEngine(getApplicationContext());
     if(ISSubscribe) {
@@ -245,8 +267,39 @@ public class LiveObjectCloudDetectionPayActivity extends AppCompatActivity imple
       searchNullEngineCloud = new SearchEngine(getApplicationContext());
     }
 
+      setUpWorkflowModel();
+
+
 
   }
+
+  public void checkDBValue()
+  {
+    conditionRef.addValueEventListener(new ValueEventListener() {
+      @Override
+      public void onDataChange(DataSnapshot dataSnapshot) {
+        String text = dataSnapshot.getValue(String.class);
+        if (text==null)
+        {
+          ISSubscribe =false;
+          Log.d(TAG, "Text Null: " + ISSubscribe);
+        } else if (Integer.parseInt(text)==1200)
+        {
+          ISSubscribe = true;
+          Log.d(TAG, "Text 1200: " + ISSubscribe);
+        }
+
+      }
+
+      @Override
+      public void onCancelled(DatabaseError databaseError) {
+        Log.d(TAG, "databaseError: " );
+      }
+    });
+
+  }
+
+
 
   @Override
   protected void onResume() {
@@ -261,6 +314,10 @@ public class LiveObjectCloudDetectionPayActivity extends AppCompatActivity imple
             ? new MultiObjectProcessor(graphicOverlay, workflowModel)
             : new ProminentObjectProcessor(graphicOverlay, workflowModel));
     workflowModel.setWorkflowState(WorkflowState.DETECTING);
+    if(FirebaseDatabase.getInstance()!=null)
+    {
+      FirebaseDatabase.getInstance().goOffline();
+    }
   }
 
   @Override
@@ -268,6 +325,10 @@ public class LiveObjectCloudDetectionPayActivity extends AppCompatActivity imple
     super.onPause();
     currentWorkflowState = WorkflowState.NOT_STARTED;
     stopCameraPreview();
+    if(FirebaseDatabase.getInstance()!=null)
+    {
+      FirebaseDatabase.getInstance().goOffline();
+    }
   }
 
   @Override
@@ -286,6 +347,11 @@ public class LiveObjectCloudDetectionPayActivity extends AppCompatActivity imple
       searchNullEngineCloud.shutdown();
     }
 
+    if(FirebaseDatabase.getInstance()!=null)
+    {
+      FirebaseDatabase.getInstance().goOffline();
+    }
+
   }
 
   @Override
@@ -295,6 +361,12 @@ public class LiveObjectCloudDetectionPayActivity extends AppCompatActivity imple
     } else {
       super.onBackPressed();
     }
+
+    if(FirebaseDatabase.getInstance()!=null)
+    {
+      FirebaseDatabase.getInstance().goOffline();
+    }
+
   }
 
   @Override
